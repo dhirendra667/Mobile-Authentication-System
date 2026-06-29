@@ -94,6 +94,23 @@ const options = {
                         },
                     },
                 },
+                // ─── Subscription ──────────────────────────────────────────────
+                CreateOrderRequest: {
+                    type: 'object',
+                    required: ['plan'],
+                    properties: {
+                        plan: { type: 'string', enum: ['basic', 'premium'], example: 'premium' },
+                    },
+                },
+                VerifyPaymentRequest: {
+                    type: 'object',
+                    required: ['razorpay_order_id', 'razorpay_payment_id', 'razorpay_signature'],
+                    properties: {
+                        razorpay_order_id: { type: 'string', example: 'order_NxJ8tQ2rPq3Lmn' },
+                        razorpay_payment_id: { type: 'string', example: 'pay_NxJ9uR3sQr4Mno' },
+                        razorpay_signature: { type: 'string', example: '7a3f9c1e...' },
+                    },
+                },
                 // ─── Response Bodies ───────────────────────────────────────────
                 SuccessResponse: {
                     type: 'object',

@@ -44,4 +44,13 @@ module.exports = {
     MSG91_TEMPLATE_ID: process.env.MSG91_TEMPLATE_ID,
 
     FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:3000',
+
+    // ─── Razorpay (Subscription payments) ─────────────────────────────────────
+    // Test mode keys — sign up at https://dashboard.razorpay.com → Settings → API Keys
+    RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID,
+    RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET,
+
+    // Simple (non-recurring) subscription model — how many days a plan stays
+    // active after a successful payment, before the app shows "renew"
+    SUBSCRIPTION_VALIDITY_DAYS: parseInt(process.env.SUBSCRIPTION_VALIDITY_DAYS) || 30,
 };

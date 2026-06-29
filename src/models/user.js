@@ -63,6 +63,27 @@ const User = sequelize.define(
             allowNull: false,
             defaultValue: 'none',
         },
+        // ─── Subscription fields ───────────────────────────────────────────
+        // Quick-lookup copy of the user's latest plan — Subscriptions table
+        // holds the full payment history, this is just so Profile/Home
+        // screens don't need a join on every request.
+        current_plan: {
+            type: DataTypes.ENUM('none', 'basic', 'premium'),
+            allowNull: false,
+            defaultValue: 'none',
+        },
+        plan_status: {
+            type: DataTypes.ENUM('inactive', 'active'),
+            allowNull: false,
+            defaultValue: 'inactive',
+        },
+        // Simple (non-recurring) model — set to paidAt + 30 days on successful
+        // payment. Once this date passes, app shows "renew" and user pays again
+        // manually. No auto-debit for now.
+        next_renewal_date: {
+            type: DataTypes.DATE,
+            allowNull: true,
+        },
     },
     {
         timestamps: true,
