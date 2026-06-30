@@ -11,6 +11,7 @@ REST API for mobile authentication — OTP-based Signup/Signin, JWT, Biometric l
 - JWT (jsonwebtoken)
 - bcryptjs (OTP hashing)
 - Twilio / MSG91 (SMS)
+- Razorpay (subscription payments)
 - express-rate-limit (OTP rate limiting)
 - Swagger UI (API docs)
 
@@ -20,16 +21,16 @@ REST API for mobile authentication — OTP-based Signup/Signin, JWT, Biometric l
 
 ```
 src/
-├── config/           # DB, server, Swagger config
-├── models/           # Sequelize models (User, OtpVerification)
-├── repositories/     # DB layer (UserRepository, OtpRepository)
-├── services/         # Business logic (AuthService, OtpService, UserService)
-├── controllers/      # Request handlers (auth_controller, user_controller)
-├── routes/v1/        # Express routers (auth_router, user_router)
+├── config/           # DB, server, Swagger, Razorpay config
+├── models/           # Sequelize models (User, OtpVerification, Subscription)
+├── repositories/     # DB layer (UserRepository, OtpRepository, SubscriptionRepository)
+├── services/         # Business logic (AuthService, OtpService, UserService, SubscriptionService)
+├── controllers/      # Request handlers (auth_controller, user_controller, subscription_controller)
+├── routes/v1/        # Express routers (auth_router, user_router, subscription_router)
 ├── middlewares/      # JWT auth, rate limiting
 ├── validators/       # Request body validation
 ├── errors/           # Custom error classes
-└── utils/            # JWT helpers, OTP utils, SMS sender
+└── utils/            # JWT helpers, OTP utils, SMS sender, Razorpay helper
 migrations/           # Sequelize CLI migrations
 ```
 
@@ -45,7 +46,8 @@ npm install
 ### 2. Configure environment
 ```bash
 cp .env.example .env
-# Fill in DB credentials, JWT secret, and SMS provider details
+# Fill in DB credentials, JWT secret, SMS provider details,
+# and Razorpay test key_id/key_secret (Dashboard → Settings → API Keys)
 ```
 
 ### 3. Create database
@@ -90,6 +92,14 @@ http://localhost:5000/api-docs
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/api/v1/auth/biometric-login` | Login after on-device biometric passes |
+
+### Subscription (Protected — Bearer JWT required)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/v1/subscription/create-order` | Create a Razorpay order — body `{ plan: 'basic' \| 'premium' }` |
+| POST | `/api/v1/subscription/verify-payment` | Verify Razorpay signature, activate the plan |
+| POST | `/api/v1/subscription/skip` | "Skip for Now" — proceed with no plan |
+| GET | `/api/v1/subscription/status` | Current plan, status, and renewal date |
 
 ### User Profile (Protected — Bearer JWT required)
 | Method | Endpoint | Description |
@@ -137,6 +147,21 @@ In **development** mode (`NODE_ENV=development`), no SMS is sent — the OTP is 
 
 ---
 
+## Subscription / Payments
+
+Two plans: **Basic ₹49/month**, **Premium ₹99/month**. Payment is handled by Razorpay's hosted checkout — card/UPI details never touch this backend, only the order ID, payment ID, and signature do.
+
+**This is a simple (non-recurring) model, not a true auto-debit subscription:**
+- A successful payment sets `next_renewal_date` to 30 days out (`SUBSCRIPTION_VALIDITY_DAYS` in `.env`)
+- There is **no automatic re-charge** when that date passes — the app shows "renew" and the user pays again manually
+- Real recurring billing would need Razorpay's separate Subscriptions API (Plans + Customers + a public webhook endpoint for auto-charge events) — intentionally left out for now; flagged as a possible v2 if needed
+
+Every order/payment attempt — including abandoned or failed checkouts — is logged in the `Subscriptions` table, so there's a full history to fall back on if a payment dispute comes up. The `Users` table only keeps the three fields needed for quick lookups (`current_plan`, `plan_status`, `next_renewal_date`), so Home/Profile screens don't need a join on every request.
+
+Payment signature verification (`POST /subscription/verify-payment`) is done **server-side only**, using HMAC-SHA256 with `RAZORPAY_KEY_SECRET` — the secret never leaves the backend.
+
+---
+
 ## Database Tables
 
 ### Users
@@ -150,6 +175,22 @@ In **development** mode (`NODE_ENV=development`), no SMS is sent — the OTP is 
 | mobile | STRING UNIQUE | E.164 format |
 | biometric_enabled | BOOLEAN | Default false |
 | biometric_type | ENUM | fingerprint / face_id / none |
+| current_plan | ENUM | none / basic / premium — default none |
+| plan_status | ENUM | inactive / active — default inactive |
+| next_renewal_date | DATE | Set on successful payment, 30 days out; null if no active plan |
+
+### Subscriptions
+| Column | Type | Notes |
+|--------|------|-------|
+| id | INTEGER PK | Auto-increment |
+| user_id | INTEGER FK → Users | |
+| plan | ENUM | basic / premium |
+| amount | INTEGER | In rupees (not paise) |
+| razorpay_order_id | STRING | Set when order is created |
+| razorpay_payment_id | STRING | Set only once checkout completes |
+| razorpay_signature | STRING | Set only once checkout completes |
+| status | ENUM | created / paid / failed |
+| valid_until | DATE | Set when status becomes paid |
 
 ### OtpVerifications
 | Column | Type | Notes |
