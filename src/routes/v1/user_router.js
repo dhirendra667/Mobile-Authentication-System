@@ -1,6 +1,7 @@
 const express = require('express');
 
 const { getMe, updateMe, updateBiometric, deleteMe } = require('../../controllers/user_controller');
+const { registerFace, disableFace } = require('../../controllers/face_auth_controller');
 const { isLoggedIn } = require('../../middlewares/auth_middleware');
 const { validateUpdateBiometric } = require('../../validators/auth_validator');
 
@@ -74,6 +75,46 @@ router.put('/me', updateMe);
  *         description: Unauthorized
  */
 router.put('/me/biometric', validateUpdateBiometric, updateBiometric);
+
+/**
+ * @swagger
+ * /users/me/face:
+ *   put:
+ *     summary: Register (or re-register) camera-based face authentication
+ *     tags: [Users]
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/RegisterFaceRequest'
+ *     responses:
+ *       200:
+ *         description: Face registered
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Unauthorized
+ */
+router.put('/me/face', registerFace);
+
+/**
+ * @swagger
+ * /users/me/face:
+ *   delete:
+ *     summary: Disable face authentication and delete the stored embedding
+ *     tags: [Users]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Face authentication disabled
+ *       401:
+ *         description: Unauthorized
+ */
+router.delete('/me/face', disableFace);
 
 /**
  * @swagger
