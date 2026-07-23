@@ -1,9 +1,9 @@
 const express = require('express');
 
-const { getMe, updateMe, updateBiometric, deleteMe } = require('../../controllers/user_controller');
-const { registerFace, disableFace } = require('../../controllers/face_auth_controller');
+const { userController, faceAuthController } = require('../../controllers/index');
 const { isLoggedIn } = require('../../middlewares/auth_middleware');
 const { validateUpdateBiometric } = require('../../validators/auth_validator');
+const { validateRegisterFace } = require('../../validators/face_auth_validator');
 
 const router = express.Router();
 
@@ -24,7 +24,7 @@ router.use(isLoggedIn);
  *       401:
  *         description: Unauthorized
  */
-router.get('/me', getMe);
+router.get('/me', userController.getMe);
 
 /**
  * @swagger
@@ -50,7 +50,7 @@ router.get('/me', getMe);
  *       401:
  *         description: Unauthorized
  */
-router.put('/me', updateMe);
+router.put('/me', userController.updateMe);
 
 /**
  * @swagger
@@ -74,7 +74,7 @@ router.put('/me', updateMe);
  *       401:
  *         description: Unauthorized
  */
-router.put('/me/biometric', validateUpdateBiometric, updateBiometric);
+router.put('/me/biometric', validateUpdateBiometric, userController.updateBiometric);
 
 /**
  * @swagger
@@ -98,7 +98,7 @@ router.put('/me/biometric', validateUpdateBiometric, updateBiometric);
  *       401:
  *         description: Unauthorized
  */
-router.put('/me/face', registerFace);
+router.put('/me/face', validateRegisterFace, faceAuthController.registerFace);
 
 /**
  * @swagger
@@ -114,7 +114,7 @@ router.put('/me/face', registerFace);
  *       401:
  *         description: Unauthorized
  */
-router.delete('/me/face', disableFace);
+router.delete('/me/face', faceAuthController.disableFace);
 
 /**
  * @swagger
@@ -130,6 +130,6 @@ router.delete('/me/face', disableFace);
  *       401:
  *         description: Unauthorized
  */
-router.delete('/me', deleteMe);
+router.delete('/me', userController.deleteMe);
 
 module.exports = router;
